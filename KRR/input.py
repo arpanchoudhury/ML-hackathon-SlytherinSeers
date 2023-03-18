@@ -1,54 +1,61 @@
 import os
+from rdkit import Chem
+from rdkit.Chem import RDKFingerprint
+from rdkit.Chem import rdMolDescriptors
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import krr_utils
 import random
 
+#================= SMILES to fingerprint ================= 
+df = pd.read_csv('dataset_train.csv', header=None)
+props = df.iloc[:,1:].to_numpy()
 
-'''df = pd.read_csv('sorted_coulombMatrix.csv', header=None)
-X = df.iloc[:,:].to_numpy()'''
+def smile2fing(string):
+    smile = string
+    mol = Chem.MolFromSmiles(smile)
+    #fingerprint_rdk = RDKFingerprint(mol)
+    fingerprint_rdk = RDKFingerprint(mol)
+    #print(">>> RDK Fingerprint = ", fingerprint_rdk)
+    fingerprint_rdk_np = np.array(fingerprint_rdk)
+    #print(">>> RDK Fingerprint in numpy = ", fingerprint_rdk_np)
+    #print(">>> RDK Fingerprint in numpy shape = ", fingerprint_rdk_np.shape)
+    return list(fingerprint_rdk_np)
 
-"""X = np.loadtxt('rep.dat')
-print(X.shape)
-Y = np.loadtxt('props_old.dat')
-print(Y.shape)
-"""
-X_train = np.load('rep_train.npy')
-X_test = np.load('rep_test.npy')
-Y_train = np.load('props_train.npy')
-Y_test = np.load('props_test.npy')
+rep = []
+for i in range(df.shape[0]):
+    x = smile2fing(df.iloc[i,0])
+    rep.append(x)
+rep = np.array(rep)
 
-"""rand_idx = list(random.sample(range(X.shape[0]), X.shape[0]))
-X = X[rand_idx,:]
-Y = Y[rand_idx,:]"""
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, shuffle=True, test_size=1000)
 
-#X_train, X_test, Y_train, Y_test = train_test_split(X, Y, shuffle=True, test_size=1000)
 
-"""np.savetxt('X_test.dat', X_test)
 np.savetxt('X_train.dat', X_train)
-np.savetxt('y_test.dat', Y_test)
+"""np.savetxt('X_test.dat', X_test)
 np.savetxt('y_train.dat', Y_train)
-"""
+np.savetxt('y_test.dat', Y_test)"""
+
 
 indices = list(i_mol for i_mol in range(X_train.shape[0]))
 indices_q = list(i_mol for i_mol in range(X_test.shape[0]))
 
-#--------------- Kernel specific inputs ---------------------------
-kernel = 'gaussian'
+#================= Kernel specific inputs ================= 
+kernel = 'laplacian'
 load_K = False
 file_kernel = 'kernel.npy'
 lamd = 1e-4
 opt_sigma = krr_utils.single_kernel_sigma(500, X_train, indices, kernel, 'max')
-with open('opt_sigma_'+kernel+'Kernel_fingerPrint2.dat', 'w+') as f:
+with open('opt_sigma_'+kernel+'Kernel_fingerPrint.dat', 'w+') as f:
     f.write(str(opt_sigma))
 
 
-with open('MAE_'+kernel+'Kernel_fingerPrint2.dat', 'w+') as f:
+with open('MAE_'+kernel+'Kernel_fingerPrint.dat', 'w+') as f:
     f.write('\n')
 
 
-#------------------- Training & prediction -------------------------
+#================= Training & prediction ================= 
 #for N_train in [1,10,100,1000,4000]:   
 for N_train in [4000]:
     K, P = krr_utils.prepare_trainingdata(kernel,N_train,load_K,file_kernel,indices,lamd,X_train,Y_train,opt_sigma) 
@@ -76,6 +83,6 @@ for N_train in [4000]:
     np.savetxt('y_pred_list.dat', y_pred_list)
     #print(N_train)
     #print(MAE)'''
-    with open('MAE_'+kernel+'Kernel_fingerPrint2.dat', 'a') as f:
+    with open('MAE_'+kernel+'Kernel_fingerPrint.dat', 'a') as f:
         f.write(str(N_train)+','+str(MAE)+'\n')
 
